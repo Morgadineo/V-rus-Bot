@@ -1,5 +1,6 @@
 import discord
-import pyodbc
+import sqlite3
+import os
 from settings import *
 from Zumbi import Zumbi
 from Loot import Loot
@@ -10,13 +11,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-dados_de_conexao = (
-    "Driver={SQLite3 ODBC Driver};"
-    "Server=localhost;"
-    "Database=banco_de_dados.db"
-)
-
-conexao = pyodbc.connect(dados_de_conexao)
+# Mudança aqui: Conexão direta com SQLite3
+conexao = sqlite3.connect('banco_de_dados.db', check_same_thread=False)
 cursor = conexao.cursor()
 
 # Classes
@@ -39,11 +35,15 @@ async def on_disconnect():
 @client.event
 async def on_message(message):
     """Função chamada quando uma mensagem é enviada"""
+    # Evitar que o bot responda a si mesmo
+    if message.author == client.user:
+        return
+        
     content = message.content.capitalize()
     channel = message.channel
     author = message.author
     author_name = author.name  # Nick do autor
-    mention = author = author.mention  # Mencionar autor
+    mention = author.mention  # Mencionar autor
 
     quantidade = 1  # Quantidade de execuções do comando
     contentSliced = content.split(' ')  # Conteúdo partido
@@ -54,7 +54,7 @@ async def on_message(message):
             try:
                 quantidade = int(contentSliced[2])
             except IndexError:
-                printarAmarelo("\n~~ IndexWarning: quantidade não informada. Utilizando padrão. ~~\n")
+                print("\n~~ IndexWarning: quantidade não informada. Utilizando padrão. ~~\n")
             except ValueError:
                 await channel.send(f"### {mention}: Quantidade Inválida!!")
                 raise ValueError('Quantidade informada não é um inteiro.')
@@ -77,4 +77,20 @@ async def on_message(message):
 # keep_alive()
 
 if __name__ == '__main__':
-    client.run('TOKEN')
+    token = os.environ.get('DISCORD_BOT_TOKEN')
+    
+    # Se não encontrou na variável de ambiente, tentar arquivo
+    if not token:
+        try:
+            with open('TOKEN.txt', 'r') as file:
+                token = file.read().strip()
+        except FileNotFoundError:
+            pass
+    
+    # Verificar se encontrou o token
+    if not token:
+        print("Erro: Token não encontrado.")
+        print("Defina a variável de ambiente DISCORD_BOT_TOKEN ou crie um arquivo TOKEN.txt")
+        exit(1)
+    
+    client.run(token)
