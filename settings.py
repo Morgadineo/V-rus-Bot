@@ -2,7 +2,7 @@ from random import choice, randint
 
 
 def apresentacao():
-    return 'Eae porra!'
+        return ', prazer! Sou um bot simples!'
 
 
 def gerarIdAleatorio(qtdeMax):
